@@ -338,17 +338,4 @@ void Context::createSSLContext()
 	SSL_CTX_set_options(_pSSLContext, SSL_OP_ALL);
 }
 
-
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-		BIGNUM* p = BN_bin2bn(dh1024_p, sizeof(dh1024_p), 0);
-		BIGNUM* g = BN_bin2bn(dh1024_g, sizeof(dh1024_g), 0);
-		DH_set0_pqg(dh, p, 0, g);
-		DH_set_length(dh, 160);
-		if (!p || !g)
-		{
-			DH_free(dh);
-			throw SSLContextException("Error creating Diffie-Hellman parameters");
-		}
-#else
-#endif
 } } // namespace Poco::Net
