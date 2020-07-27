@@ -61,6 +61,7 @@ private:
 	Logger&           _logger;
 	Message::Priority _priority;
 	std::string       _message;
+	Mutex             _mutex;
 };
 
 

@@ -45,6 +45,7 @@ void LogStreamBuf::setPriority(Message::Priority priority)
 
 int LogStreamBuf::writeToDevice(char c)
 {
+	_mutex.lock();
 	if (c == '\n' || c == '\r')
 	{
 		Message msg(_logger.name(), _message, _priority);
@@ -52,6 +53,7 @@ int LogStreamBuf::writeToDevice(char c)
 		_logger.log(msg);
 	}
 	else _message += c;
+	_mutex.unlock();
 	return c;
 }
 
