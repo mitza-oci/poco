@@ -37,11 +37,20 @@ WebSocketImpl::WebSocketImpl(StreamSocketImpl* pStreamSocketImpl, bool mustMaskP
 {
 	poco_check_ptr(pStreamSocketImpl);
 	_pStreamSocketImpl->duplicate();
+	_pHTTPSessionBuffer = 0;
+	_HTTPSessionBufferSize = 0;
+	_pHTTPSessionBufferStart = 0;
 }
 
 
 WebSocketImpl::~WebSocketImpl()
 {
+	if (_pHTTPSessionBuffer) {
+		delete _pHTTPSessionBuffer;
+		_pHTTPSessionBuffer = 0;
+		_HTTPSessionBufferSize = 0;
+                _pHTTPSessionBufferStart = 0;
+	}
 	_pStreamSocketImpl->release();
 	reset();
 }
@@ -184,16 +193,30 @@ int WebSocketImpl::receiveBytes(void* buffer, int length, int)
 
 int WebSocketImpl::receiveNBytes(void* buffer, int bytes)
 {
-	int received = _pStreamSocketImpl->receiveBytes(reinterpret_cast<char*>(buffer), bytes);
-	if (received > 0)
-	{
-		while (received < bytes)
+        int received = 0;
+
+	if ((_HTTPSessionBufferSize > 0) && (_HTTPSessionBufferSize >= bytes) && _pHTTPSessionBuffer) {
+		std::memcpy(buffer, _pHTTPSessionBufferStart, bytes);
+		_HTTPSessionBufferSize -= bytes;
+		_pHTTPSessionBufferStart += bytes;
+		received = bytes;
+		if (_HTTPSessionBufferSize == 0) {
+			delete _pHTTPSessionBuffer;
+			_pHTTPSessionBuffer = 0;
+			_pHTTPSessionBufferStart = 0;
+		}
+	} else {
+		received = _pStreamSocketImpl->receiveBytes(reinterpret_cast<char*>(buffer), bytes);
+		if (received > 0)
 		{
-			int n = _pStreamSocketImpl->receiveBytes(reinterpret_cast<char*>(buffer) + received, bytes - received);
-			if (n > 0)
-				received += n;
-			else
-				throw WebSocketException("Incomplete frame received", WebSocket::WS_ERR_INCOMPLETE_FRAME);
+			while (received < bytes)
+			{
+				int n = _pStreamSocketImpl->receiveBytes(reinterpret_cast<char*>(buffer) + received, bytes - received);
+				if (n > 0)
+					received += n;
+				else
+					throw WebSocketException("Incomplete frame received", WebSocket::WS_ERR_INCOMPLETE_FRAME);
+			}
 		}
 	}
 	return received;
@@ -314,5 +337,12 @@ Poco::Timespan WebSocketImpl::getReceiveTimeout()
 	return _pStreamSocketImpl->getReceiveTimeout();
 }
 
+
+void WebSocketImpl::setHTTPSessionBuffer(char* buffer, int size) {
+
+	_pHTTPSessionBuffer = buffer;
+	_HTTPSessionBufferSize = size;
+	_pHTTPSessionBufferStart = _pHTTPSessionBuffer;
+}
 	
 } } // namespace Poco::Net

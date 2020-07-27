@@ -204,7 +204,21 @@ WebSocketImpl* WebSocket::completeHandshake(HTTPClientSession& cs, HTTPResponse&
 	std::string accept = response.get("Sec-WebSocket-Accept", "");
 	if (accept != computeAccept(key))
 		throw WebSocketException("Invalid or missing Sec-WebSocket-Accept header in handshake response", WS_ERR_NO_HANDSHAKE);
-	return new WebSocketImpl(static_cast<StreamSocketImpl*>(cs.detachSocket().impl()), true);
+
+	int hbuffSize = cs.buffered();
+	char* hbuffer = 0;
+        if (hbuffSize) {
+		hbuffer = new char[hbuffSize];
+		cs.read(hbuffer, hbuffSize);
+	}
+
+	WebSocketImpl* wsImpl = new WebSocketImpl(static_cast<StreamSocketImpl*>(cs.detachSocket().impl()), true);
+
+	if (hbuffer)
+		if (wsImpl) wsImpl->setHTTPSessionBuffer(hbuffer, hbuffSize);
+	else delete hbuffer;
+
+	return wsImpl;
 }
 
 

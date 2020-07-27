@@ -70,6 +70,8 @@ public:
 	bool mustMaskPayload() const;
 		/// Returns true if the payload must be masked.
 
+       void setHTTPSessionBuffer(char* buffer, int size);
+
 protected:
 	enum
 	{
@@ -87,6 +89,9 @@ private:
 	int _frameFlags;
 	bool _mustMaskPayload;
 	Poco::Random _rnd;
+	char* _pHTTPSessionBuffer;
+	int _HTTPSessionBufferSize;
+	char* _pHTTPSessionBufferStart;
 };
 
 
